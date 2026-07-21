@@ -1,5 +1,8 @@
 import requests
 
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
 
 # turns class_names into a list and ask user to enter command
 
@@ -36,16 +39,37 @@ Reply with only the exact object name from the list, nothing else."""
     target_name = result['response'].strip().lower()
     return target_name 
 
+# publisher node that publishes the target name to the /search_targets topic
 
-def main():
-    class_names = load_class_names('class_names.txt')
-    print("Loaded class names:", class_names)
+class CommandInterpreterNode(Node):
+    def __init__(self):
+        super().__init__('command_interpreter_node')
+        self.publisher_ = self.create_publisher(String, 'search_targets', 10)
+        self.class_names = load_class_names('class_names.txt')
+        self.get_logger().info(f"Loaded class names: {self.class_names}")
 
-    user_command = get_user_command()
-    print("You typed:", user_command)
+    def run_once(self):
+        user_command = get_user_command()
+        target = ask_llm_for_target(user_command, self.class_names)
+        self.get_logger().info(f"LLM identified target: {target}")
 
-    target = ask_llm_for_target(user_command, class_names)
-    print("LLM identified target:", target)
+        msg = String()
+        msg.data = target
+        self.publisher_.publish(msg)
+        self.get_logger().info(f"Published to /search_targets: {target}")
+
+
+
+def main(args=None):
+
+    rclpy.init(args=args)
+    node = CommandInterpreterNode()
+    node.run_once()
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+
 
 if __name__ == '__main__':
     main()
