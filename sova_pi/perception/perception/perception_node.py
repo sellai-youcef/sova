@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 import depthai as dai
+import time
 
 COCO_LABELS = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck",
@@ -19,14 +20,16 @@ COCO_LABELS = [
 ]
 
 CONFIDENCE_THRESHOLD = 0.6
+LOST_TARGET_TIMEOUT = 10.0
 
 
 class PerceptionNode(Node):
     def __init__(self):
         super().__init__('perception_node')
 
-        self.searching = False
+        self.state = "idle"
         self.target_label = None
+        self.last_seen_time = None
 
         self.subscription_ = self.create_subscription(
             String, 'search_targets', self.target_callback, 10)
@@ -47,22 +50,21 @@ class PerceptionNode(Node):
 
         self.pipeline.start()
 
-        self.timer_ = None
+        self.timer_ = self.create_timer(1.0, self.check_detections)
         self.get_logger().info("perception node idle, waiting for a target")
 
     def target_callback(self, msg):
         self.target_label = msg.data
-        self.searching = True
+        self.state = "searching"
         self.get_logger().info(f"target received: {self.target_label}, starting search")
 
-        if self.timer_ is None:
-            self.timer_ = self.create_timer(0.2, self.check_detections)
-
     def check_detections(self):
-        if not self.searching:
+        if self.state == "idle":
             return
 
         detections = self.detection_queue.get()
+        found_this_frame = False
+
         for det in detections.detections:
             if det.confidence < CONFIDENCE_THRESHOLD:
                 continue
@@ -77,12 +79,21 @@ class PerceptionNode(Node):
                 coord_msg.data = f"{x:.0f},{y:.0f},{z:.0f}"
                 self.coord_publisher_.publish(coord_msg)
 
-                self.get_logger().info(
-                    f"found {label_name} at x={x:.0f}, y={y:.0f}, z={z:.0f}, published")
+                found_this_frame = True
+                self.last_seen_time = time.time()
 
-                self.searching = False
-                self.get_logger().info("search complete")
-                return
+                if self.state == "searching":
+                    self.get_logger().info(
+                        f"found {label_name}, now tracking, z={z:.0f}mm")
+                    self.state = "tracking"
+                elif self.state == "tracking":
+                    self.get_logger().info(f"tracking {label_name}, z={z:.0f}mm")
+                break
+
+        if self.state == "tracking" and not found_this_frame:
+            if time.time() - self.last_seen_time > LOST_TARGET_TIMEOUT:
+                self.get_logger().info("lost target, back to searching")
+                self.state = "searching"
 
 
 def main(args=None):
