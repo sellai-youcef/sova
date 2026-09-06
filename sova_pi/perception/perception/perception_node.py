@@ -35,6 +35,8 @@ class PerceptionNode(Node):
             String, 'search_targets', self.target_callback, 10)
         self.coord_publisher_ = self.create_publisher(String, 'target_coordinates', 10)
 
+        #publisher for horizontal offset 
+        self.offset_publisher_ = self.create_publisher(String, 'target_offset', 10)
         self.device = dai.Device()
         self.pipeline = dai.Pipeline(self.device)
 
@@ -75,9 +77,17 @@ class PerceptionNode(Node):
                 y = det.spatialCoordinates.y
                 z = det.spatialCoordinates.z
 
+                box_center = (det.xmin + det.xmax) / 2
+                # offset ranges from -50 to 50 
+                offset = (box_center - 0.5) * 100
+
                 coord_msg = String()
                 coord_msg.data = f"{x:.0f},{y:.0f},{z:.0f}"
                 self.coord_publisher_.publish(coord_msg)
+
+                offset_msg = String()
+                offset_msg.data = f"{offset:.1f}"
+                self.offset_publisher_.publish(offset_msg)
 
                 found_this_frame = True
                 self.last_seen_time = time.time()
