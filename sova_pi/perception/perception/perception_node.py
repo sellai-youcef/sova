@@ -45,9 +45,17 @@ class PerceptionNode(Node):
             autoCreateCameras=True,
             presetMode=dai.node.StereoDepth.PresetMode.FAST_ACCURACY
         )
+        
+
         self.spatial_net = self.pipeline.create(dai.node.SpatialDetectionNetwork).build(
-            cam_rgb, stereo, dai.NNModelDescription("luxonis/yolov6-nano:r2-coco-512x384")
+        cam_rgb, stereo, dai.NNModelDescription("luxonis/yolov6-nano:r2-coco-512x384")
+        
         )
+
+        self.class_labels = self.spatial_net.getClasses()
+
+        self.get_logger().info(f"model classes: {self.class_labels}")
+
         self.detection_queue = self.spatial_net.out.createOutputQueue()
 
         self.pipeline.start()
@@ -71,7 +79,7 @@ class PerceptionNode(Node):
             if det.confidence < CONFIDENCE_THRESHOLD:
                 continue
 
-            label_name = COCO_LABELS[det.label]
+            label_name = self.class_labels[det.label]
             if label_name == self.target_label:
                 x = det.spatialCoordinates.x
                 y = det.spatialCoordinates.y

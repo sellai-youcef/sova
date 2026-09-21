@@ -12,6 +12,8 @@ MIN_ANGLE = 0
 MAX_ANGLE = 1200
 DIRECTION = 1 
 
+PROPORTIONAL_GAIN = 4
+
 class ArduinoBridgeNode(Node):
     def __init__(self):
         super().__init__('arduino_bridge_node')
@@ -72,13 +74,12 @@ class ArduinoBridgeNode(Node):
         if abs(offset) <= DEAD_ZONE:
             return
 
-        step = NUDGE_STEP if offset > 0 else -NUDGE_STEP
+        step = offset * PROPORTIONAL_GAIN
         step *= DIRECTION
         new_angle = self.current_angle + step
 
         self.send_angle(new_angle)
-        self.get_logger().info(f"nudged servo to {new_angle} based on offset {offset:.1f}")
-
+        self.get_logger().info(f"nudged servo to {self.current_angle} based on offset {offset:.1f}")
 
 def main(args=None):
     rclpy.init(args=args)
