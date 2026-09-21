@@ -52,7 +52,7 @@ class PerceptionNode(Node):
 
         self.pipeline.start()
 
-        self.timer_ = self.create_timer(1.0, self.check_detections)
+        self.timer_ = self.create_timer(0.3, self.check_detections)
         self.get_logger().info("perception node idle, waiting for a target")
 
     def target_callback(self, msg):
