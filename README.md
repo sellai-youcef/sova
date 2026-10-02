@@ -1,6 +1,6 @@
 # SOVA (Spatial Object and Visual Assistant)
 
-A physical robot that takes a natural language request, searches a room using depth perception, locates the requested object, and physically tracks it in real time — a complete perceive → reason → act loop running entirely on real hardware, not simulation.
+A physical robot that takes a natural language request, searches a room using depth perception, locates the requested object, and physically tracks it in real time. A complete perceive → reason → act loop running entirely on real hardware, not simulation.
 
 ![SOVA](assets/hero.jpg)
 
