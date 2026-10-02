@@ -64,7 +64,7 @@ SOVA's structural hardware is my own design, not off-the-shelf.
 <td><img src="assets/mastercam.jpg" width="280"><br><sub>CAM toolpath programming for the base plate</sub></td>
 </tr>
 <tr>
-<td colspan="2" align="center"><img src="assets/finished.jpg" width="280"><br><sub>The finished, machined base plate</sub></td>
+<td colspan="2" align="center"><img src="assets/finished.jpg" width="280"><br><sub>The finished, machined upper rotating stage</sub></td>
 </tr>
 </table>
 
