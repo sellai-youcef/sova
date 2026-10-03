@@ -12,7 +12,7 @@ MIN_ANGLE = 0
 MAX_ANGLE = 1200
 DIRECTION = 1 
 
-PROPORTIONAL_GAIN = 4
+PROPORTIONAL_GAIN = 1.0
 
 class ArduinoBridgeNode(Node):
     def __init__(self):
