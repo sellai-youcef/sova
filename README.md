@@ -2,16 +2,12 @@
 
 A physical robot that takes a natural language request, searches a room using depth perception, locates the requested object, and physically tracks it in real time. A complete perceive → reason → act loop running entirely on real hardware, not simulation.
 
-![SOVA](assets/hero.jpg)
-
-## Demo
-
-*Full tracking demo video coming soon*
+![Demo](demo.gif)
 
 ## How It Works
 
-1. You type or speak a request in plain language. For example, "Find a tool I can take a picture with"
-2. A locally-hosted LLM (Llama 3.2 via Ollama) reasons over SOVA's known object categories and picks the correct target. No keyword matching, only genuine semantic reasoning over an open-ended request
+1. You type a request in plain language. For example, "Find a tool I can take a picture with"
+2. A locally-hosted LLM (Llama 3.2 via Ollama) reasons over SOVA's known object categories and picks the correct target. No keyword matching, only semantic reasoning over an open-ended request
 3. SOVA's base rotates, sweeping the room while its depth camera searches
 4. Once the object is detected, SOVA locks on, shows live distance on its onboard screen, and physically tracks it as it moves
 
@@ -25,7 +21,7 @@ Three ROS2 nodes across two machines:
 | `perception_node` | Raspberry Pi 5 | Runs an OAK-D depth camera with an onboard YOLO detection model, searches for the target, publishes its 3D position and how far off-center it is in frame |
 | `arduino_bridge_node` | Raspberry Pi 5 | Relays search/tracking state to the Arduino over serial, drives the base servo's search sweep and proportional tracking correction |
 
-The Arduino itself runs minimal firmware — it receives simple serial commands (a target angle, a distance to display) and executes them immediately. All search and tracking logic lives in Python on the Pi, keeping the embedded side lightweight.
+The Arduino itself runs minimal firmware. It receives simple serial commands (a target angle, a distance to display) and executes them immediately. All search and tracking logic lives in Python on the Pi, keeping the embedded side lightweight.
 
 ## Hardware
 
@@ -50,13 +46,15 @@ The Arduino itself runs minimal firmware — it receives simple serial commands 
 
 A few of the harder problems solved along the way:
 
-**Hardware fault isolation.** The first servo driver board stopped responding entirely. When powered, the board experienced an immediate and abnormal heat buildup, becoming hot to the touch within seconds, a clear indicator of an internal short circuit or hardware defect. Rather than assuming a software or wiring issue, I systematically ruled out the surrounding components (wiring, individual servos, firmware) and confirmed the hardware failure using the manufacturer's diagnostic software running independently of my code. Replacing the defective board immediately restored system functionality.
-**Embedded memory optimization.** The Arduino's dynamic memory usage sat at 94%, causing intermittent, hard-to-reproduce failures. I identified the cause as a full-frame display buffer in the graphics library and switched to page-buffer mode, dropping usage to 50% and eliminating the failures entirely.
-**Shared serial channel conflict.** The Arduino Uno has exactly one hardware serial channel, shared between its USB port and its TX/RX pins. With the servo driver board and the Pi both needing that same channel, neither could communicate reliably. I moved the servo to a software-emulated serial connection on separate pins, lowered its baud rate to match, and patched the servo library itself to accept a generic serial interface instead of being hardcoded to hardware serial, freeing the real hardware serial line for the Pi alone.
+**Hardware fault isolation.** The initial servo driver board stopped responding and immediately overheated on power-up. I isolated the board from the rest of the circuit, tested the servos independently, and verified the hardware failure using the manufacturer's diagnostic software. Swapping in a replacement board resolved this.
+
+**Embedded memory optimization.** The Arduino's dynamic memory usage was at 94%, causing intermittent runtime crashes. The issue was a full-frame display buffer in the graphics library. I switched the library to page-buffer mode, dropping RAM usage to 50% and stabilizing the system entirely.
+
+**Shared serial channel conflict.** The Arduino Uno only has one hardware serial channel, but both the servo driver and the Pi needed it. I moved the servo to a SoftwareSerial connection on separate pins and lowered the baud rate. I also had to patch the third-party servo library to accept a generic Stream interface instead of hardcoded hardware serial. This freed up the main hardware serial line for reliable Pi-to-Arduino communication.
 
 ## Mechanical Design & Fabrication
 
-SOVA's structural hardware is my own design, not off-the-shelf.
+SOVA's structural hardware is my own design, made of aluminum 6061 that was CNC-machined.
 
 <table>
 <tr>
@@ -68,18 +66,19 @@ SOVA's structural hardware is my own design, not off-the-shelf.
 </tr>
 </table>
 
-Mounting hole patterns and fastener clearances were sourced from manufacturer reference CAD and datasheets rather than estimated. Load-bearing components, like the servo, are bolted directly; lighter electronics are secured with mounting tape to allow rapid reconfiguration during active development.
-## Known Limitations / Next Steps
+Mounting hole patterns and fastener clearances were sourced directly from manufacturer reference CAD and datasheets. Load-bearing components like the servo are bolted directly, while lighter electronics are secured with mounting tape for rapid prototyping.
 
-- Servo tracking is functional but still being tuned. Some oscillation remains at current gain settings
+## Known Limitations & Next Steps
+
 - SOVA runs one detection model at a time. The default is a general-purpose model covering 80 common object categories.
-- The OAK-D camera can occasionally lose connection under sustained continuous use; a brief power cycle resolves it
+- The OAK-D camera can occasionally lose connection under sustained continuous use; a brief power cycle resolves it.
 
 ## Setup Notes
 
-If you're building on this repo, the `SCServo` Arduino library needs one manual patch to compile with software serial: in `SCSerial.h`, change `HardwareSerial *pSerial;` to `Stream *pSerial;`. This isn't part of this repo, it's a third-party library so the patch needs to be reapplied if the library is reinstalled fresh.
+Note: To compile with software serial, the `SCServo` Arduino library requires a manual patch. In `SCSerial.h`, change `HardwareSerial *pSerial;` to `Stream *pSerial;`. This must be reapplied if the library is updated or reinstalled fresh.
 
 ## Author
 
-Youcef Sellai — Mechanical Engineering, Concordia University
+Youcef Sellai 
+Mechanical Engineering, Concordia University 
 [linkedin.com/in/youcef-sellai](https://linkedin.com/in/youcef-sellai) · [github.com/sellai-youcef](https://github.com/sellai-youcef)
